@@ -1,13 +1,21 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { getCalendar } from '../apiHandlers/calendarapi';
 
-function createCalendar() {
+function CreateCalendar() {
 
-  const [calendar, setcalendar] = useState(getCalendar());
-
+  const [calendar, setCalendar] = useState('');
+  
+  useEffect(() => {
+    async function fetchCalendar() {
+      const data = getCalendar();
+      console.log(data);
+      setCalendar(data);
+    }
+    fetchCalendar();
+  },[]);
   return (
-    <h1 style={{color: 'whitesmoke', textAlign: 'right'}}> {calendar} </h1>
+    <h2> {calendar} </h2>
   );
 };
 
-export default createCalendar;
+export default CreateCalendar;

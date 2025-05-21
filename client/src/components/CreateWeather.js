@@ -1,12 +1,21 @@
-import React, { useState } from 'react';
-import getWeather from '../apiHandlers/weatherapi';
+import React, { useEffect, useState } from 'react';
+import { getWeather }from '../apiHandlers/weatherapi';
 
-function createWeather() {
+function CreateWeather() {
+  const [weather, setWeather] = useState('');
+  useEffect(() => {
+  async function fetchWeather() {
+    const data = await getWeather();
+    console.log("Weather data: ", data.list[0].main.temp);
+    setWeather(Math.round(data.list[0].main.temp) + '\u00B0' + "F");
+  }
+  fetchWeather();
+}, []);
   return (
-    <div style={{color: "whitesmoke"}}>
-      <h2> Created Weather Attribute </h2>
-    </div>
+    <h2>
+      Current Temp: {weather}
+    </h2>
   );
 };
 
-export default createWeather;
+export default CreateWeather;
