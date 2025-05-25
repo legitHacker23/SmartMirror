@@ -1,5 +1,25 @@
 .container {
-  color: whitesmoke;
   display: flex;
-  column-gap: 1000px;
+  font-family: sans-serif;
+  column-gap: 940px;
+  color: rgba(225, 225, 225, 0.5);
+  letter-spacing: 1px;
+}
+
+.createclock {
+  color: rgba(225, 225, 225);
+  text-align: center;
+}
+
+.hour {
+  font-family:Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif ;
+  color: white;
+  letter-spacing: 2px;
+}
+
+.seconds {
+  font-size: 75%;
+  color: rgba(225, 225, 225, 0.3);
+  letter-spacing: 1px;
+  font-family:'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
 }

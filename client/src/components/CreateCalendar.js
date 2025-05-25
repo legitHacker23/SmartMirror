@@ -1,21 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import { getCalendar } from '../apiHandlers/calendarapi';
+import Calendar from 'react-calendar';
 
-function CreateCalendar() {
+  // const [calendar, setCalendar] = useState('');
+  // useEffect(() => {
+  //   async function fetchCalendar() {
+  //     const data = await getCalendar();
+  //   }
+  //   fetchCalendar();
+  // }, []);
 
-  const [calendar, setCalendar] = useState('');
-  
-  useEffect(() => {
-    async function fetchCalendar() {
-      const data = getCalendar();
-      console.log(data);
-      setCalendar(data);
-    }
-    fetchCalendar();
-  },[]);
-  return (
-    <h2> {calendar} </h2>
-  );
-};
+  const ReactCalendar = () => {
+    const [date, setDate] = useState(new Date());
 
-export default CreateCalendar;
+    const onChange = date => {
+      setDate(date);
+    };
+
+    return (
+      <div>
+        <Calendar onChange={onChange} value={date} />
+      </div>
+    );
+  };
+
+export default ReactCalendar;
