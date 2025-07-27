@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { getGPT } from "../apiHandlers/gptapi";
 import { getWeather } from "../apiHandlers/weatherapi";
 import { getCalendar } from "../apiHandlers/calendarapi";
-import { textToSpeech, stopSpeaking as stopTTS, getVoices } from "../apiHandlers/ttsapi";
+import { textToSpeech, stopSpeaking as stopTTS, getVoices, getEngines, getCurrentEngine, setEngine } from "../apiHandlers/ttsapi";
 
 function WakeWord() {
   const [isListening, setIsListening] = useState(false);
@@ -13,6 +13,8 @@ function WakeWord() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voices, setVoices] = useState([]);
   const [selectedVoice, setSelectedVoice] = useState('');
+  const [engines, setEngines] = useState([]);
+  const [selectedEngine, setSelectedEngine] = useState('neural');
   
   const recognition = useRef(null);
   const wakeWord = 'hey mirror';
@@ -41,7 +43,7 @@ function WakeWord() {
     }
   };
 
-  // Load available voices
+  // Load available voices and engines
   const loadVoices = async () => {
     try {
       const availableVoices = await getVoices();
@@ -55,28 +57,40 @@ function WakeWord() {
     }
   };
 
+  const loadEngines = () => {
+    const availableEngines = getEngines();
+    setEngines(availableEngines);
+    const currentEngine = getCurrentEngine();
+    setSelectedEngine(currentEngine);
+  };
+
   const speakText = async (text) => {
     try {
       setIsSpeaking(true);
-      console.log('Attempting to speak:', text);
+      console.log('Attempting to speak with Puter.js:', text);
       
-      // Use Web Speech API directly with callback to handle speaking state
+      // Use Puter.js TTS with selected engine
       await textToSpeech(text, selectedVoice, () => {
         setIsSpeaking(false);
       });
       
-      console.log('Web Speech API audio started playing');
+      console.log('Puter.js audio started playing');
       
     } catch (error) {
-      console.error('TTS error:', error);
+      console.error('Puter.js TTS error:', error);
       setIsSpeaking(false);
     }
   };
 
   const stopSpeaking = () => {
-    // Stop Web Speech API
+    // Stop Puter.js TTS
     stopTTS();
     setIsSpeaking(false);
+  };
+
+  const handleEngineChange = (engine) => {
+    setSelectedEngine(engine);
+    setEngine(engine);
   };
 
   useEffect(() => {
@@ -174,8 +188,9 @@ function WakeWord() {
   }, []);
 
   useEffect(() => {
-    // Load voices when component mounts
+    // Load voices and engines when component mounts
     loadVoices();
+    loadEngines();
   }, []);
 
   const resetInactivityTimer = () => {
@@ -427,24 +442,44 @@ function WakeWord() {
             Say "{wakeWord}" to activate
           </p>
           
-          {/* Voice Selection */}
-          {voices.length > 0 && (
-            <div className="voice-selection">
-              <label htmlFor="voice-select">Voice: </label>
-              <select 
-                id="voice-select"
-                value={selectedVoice}
-                onChange={(e) => setSelectedVoice(e.target.value)}
-                disabled={isSpeaking}
-              >
-                {voices.map(voice => (
-                  <option key={voice.voice_id} value={voice.voice_id}>
-                    {voice.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          {/* Voice and Engine Selection */}
+          <div className="settings-container">
+            {voices.length > 0 && (
+              <div className="voice-selection">
+                <label htmlFor="voice-select">Voice: </label>
+                <select 
+                  id="voice-select"
+                  value={selectedVoice}
+                  onChange={(e) => setSelectedVoice(e.target.value)}
+                  disabled={isSpeaking}
+                >
+                  {voices.map(voice => (
+                    <option key={voice.voice_id} value={voice.voice_id}>
+                      {voice.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            
+            {engines.length > 0 && (
+              <div className="engine-selection">
+                <label htmlFor="engine-select">Engine: </label>
+                <select 
+                  id="engine-select"
+                  value={selectedEngine}
+                  onChange={(e) => handleEngineChange(e.target.value)}
+                  disabled={isSpeaking}
+                >
+                  {engines.map(engine => (
+                    <option key={engine.id} value={engine.id}>
+                      {engine.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         <div className="conversation-interface">
@@ -470,7 +505,7 @@ function WakeWord() {
           {isSpeaking && (
             <div className="speaking">
               <div className="speaking-indicator">🔊</div>
-              <p>Speaking...</p>
+              <p>Speaking with {selectedEngine} engine...</p>
             </div>
           )}
           
