@@ -37,13 +37,13 @@ export async function textToSpeech(text, voiceName = null, onEnd = null) {
     // Cancel any ongoing speech
     stopSpeaking();
 
-    // Get current engine preference
-    const currentEngine = getCurrentEngine();
+    // Always use generative engine for best quality
+    const currentEngine = "generative";
 
     // Default options
     const options = {
       language: "en-US",
-      engine: currentEngine // Use the selected engine
+      engine: currentEngine // Always use generative engine
     };
 
     // Set voice if specified
@@ -71,8 +71,48 @@ export async function textToSpeech(text, voiceName = null, onEnd = null) {
       if (onEnd) onEnd();
     });
 
-    // Play the audio
-    await audio.play();
+    // Handle pause events (when user manually stops)
+    audio.addEventListener('pause', () => {
+      console.log('Puter.js speech paused');
+      window.currentPuterAudio = null;
+      if (onEnd) onEnd();
+    });
+
+    // Handle abort events
+    audio.addEventListener('abort', () => {
+      console.log('Puter.js speech aborted');
+      window.currentPuterAudio = null;
+      if (onEnd) onEnd();
+    });
+
+    // Play the audio with error handling for autoplay restrictions
+    try {
+      await audio.play();
+      console.log('Puter.js audio started successfully');
+    } catch (playError) {
+      console.error('Failed to play audio:', playError);
+      
+      // If it's an autoplay restriction, try to enable audio context
+      if (playError.name === 'NotAllowedError') {
+        console.log('Autoplay blocked. User interaction required.');
+        
+        // Try to resume audio context if it's suspended
+        if (audio.context && audio.context.state === 'suspended') {
+          try {
+            await audio.context.resume();
+            await audio.play();
+            console.log('Audio context resumed and audio started');
+          } catch (resumeError) {
+            console.error('Failed to resume audio context:', resumeError);
+            throw new Error('Audio playback requires user interaction. Please click or interact with the page first.');
+          }
+        } else {
+          throw new Error('Audio playback requires user interaction. Please click or interact with the page first.');
+        }
+      } else {
+        throw playError;
+      }
+    }
     
     return audio;
   } catch (error) {
@@ -95,10 +135,10 @@ export async function getVoices() {
     { voice_id: "Kevin", name: "Kevin (en-US)", lang: "en-US", default: false },
     { voice_id: "Ivy", name: "Ivy (en-US)", lang: "en-US", default: false },
     { voice_id: "Kimberly", name: "Kimberly (en-US)", lang: "en-US", default: false },
-    { voice_id: "Emma", name: "Emma (en-US)", lang: "en-US", default: false },
+    { voice_id: "Emma_US", name: "Emma (en-US)", lang: "en-US", default: false },
     { voice_id: "Brian", name: "Brian (en-GB)", lang: "en-GB", default: false },
     { voice_id: "Amy", name: "Amy (en-GB)", lang: "en-GB", default: false },
-    { voice_id: "Emma", name: "Emma (en-GB)", lang: "en-GB", default: false },
+    { voice_id: "Emma_GB", name: "Emma (en-GB)", lang: "en-GB", default: false },
     { voice_id: "Geraint", name: "Geraint (en-GB)", lang: "en-GB", default: false },
     { voice_id: "Lea", name: "Lea (fr-FR)", lang: "fr-FR", default: false },
     { voice_id: "Mathieu", name: "Mathieu (fr-FR)", lang: "fr-FR", default: false },

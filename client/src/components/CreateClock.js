@@ -15,7 +15,7 @@ function CreateClock() {
     <div className="smart-clock">
       <div className="time-display">
         <div className="time-main">
-          <span className="hours-minutes">{clock.format('HH:mm')}</span>
+          <span className="hours-minutes">{clock.format('hh:mm')}</span>
           <span className="seconds">{clock.format('ss')}</span>
         </div>
         <div className="date-display">

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { getGPT } from "../apiHandlers/gptapi";
 import { getWeather } from "../apiHandlers/weatherapi";
 import { getCalendar } from "../apiHandlers/calendarapi";
-import { textToSpeech, stopSpeaking as stopTTS, getVoices, getEngines, getCurrentEngine, setEngine } from "../apiHandlers/ttsapi";
+import { textToSpeech, stopSpeaking as stopTTS, getVoices } from "../apiHandlers/ttsapi";
 
 function WakeWord() {
   const [isListening, setIsListening] = useState(false);
@@ -13,8 +13,6 @@ function WakeWord() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voices, setVoices] = useState([]);
   const [selectedVoice, setSelectedVoice] = useState('');
-  const [engines, setEngines] = useState([]);
-  const [selectedEngine, setSelectedEngine] = useState('neural');
   
   const recognition = useRef(null);
   const wakeWord = 'hey mirror';
@@ -57,21 +55,18 @@ function WakeWord() {
     }
   };
 
-  const loadEngines = () => {
-    const availableEngines = getEngines();
-    setEngines(availableEngines);
-    const currentEngine = getCurrentEngine();
-    setSelectedEngine(currentEngine);
-  };
-
   const speakText = async (text) => {
     try {
       setIsSpeaking(true);
       console.log('Attempting to speak with Puter.js:', text);
       
-      // Use Puter.js TTS with selected engine
+      // Use Puter.js TTS with selected engine and callback to reset after completion
       await textToSpeech(text, selectedVoice, () => {
         setIsSpeaking(false);
+        // Reset recognition only after TTS is completely done
+        setTimeout(() => {
+          resetRecognition();
+        }, 2000); // Small delay to show the response before resetting
       });
       
       console.log('Puter.js audio started playing');
@@ -79,6 +74,20 @@ function WakeWord() {
     } catch (error) {
       console.error('Puter.js TTS error:', error);
       setIsSpeaking(false);
+      
+      // Handle autoplay restriction error
+      if (error.message && error.message.includes('user interaction')) {
+        setLlmResponse(prev => prev + '\n\n⚠️ Audio blocked: Please click anywhere on the page to enable audio playback.');
+        // Reset recognition after showing the error message
+        setTimeout(() => {
+          resetRecognition();
+        }, 5000); // Give user time to read the error message
+      } else {
+        // Reset recognition on other errors
+        setTimeout(() => {
+          resetRecognition();
+        }, 3000);
+      }
     }
   };
 
@@ -86,11 +95,6 @@ function WakeWord() {
     // Stop Puter.js TTS
     stopTTS();
     setIsSpeaking(false);
-  };
-
-  const handleEngineChange = (engine) => {
-    setSelectedEngine(engine);
-    setEngine(engine);
   };
 
   useEffect(() => {
@@ -190,7 +194,29 @@ function WakeWord() {
   useEffect(() => {
     // Load voices and engines when component mounts
     loadVoices();
-    loadEngines();
+    
+    // Add user interaction handler to enable audio
+    const enableAudio = () => {
+      // Create a silent audio context to enable audio playback
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioContext.state === 'suspended') {
+          audioContext.resume();
+        }
+        console.log('Audio context enabled by user interaction');
+      } catch (error) {
+        console.log('Audio context already enabled or not supported');
+      }
+    };
+    
+    // Enable audio on first user interaction
+    document.addEventListener('click', enableAudio, { once: true });
+    document.addEventListener('touchstart', enableAudio, { once: true });
+    
+    return () => {
+      document.removeEventListener('click', enableAudio);
+      document.removeEventListener('touchstart', enableAudio);
+    };
   }, []);
 
   const resetInactivityTimer = () => {
@@ -250,11 +276,8 @@ function WakeWord() {
 
       // Always include current time context
       const now = new Date();
-      const currentTimeInfo = `Current time: ${now.toLocaleString('en-US', { 
+      const currentTimeInfo = `It's ${now.toLocaleString('en-US', { 
         weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric',
         hour: 'numeric',
         minute: '2-digit',
         hour12: true 
@@ -296,33 +319,32 @@ function WakeWord() {
         calendarResult = needsWeather ? results[1] : results[0];
       }
 
-      // Process weather data
+      // Process weather data - more concise
       if (weatherResult) {
         try {
-          let weatherInfo = `Current weather: ${weatherResult.weather[0].description}, ${Math.round(weatherResult.main.temp)}°F (feels like ${Math.round(weatherResult.main.feels_like)}°F). `;
+          let weatherInfo = `${Math.round(weatherResult.main.temp)}°F, ${weatherResult.weather[0].description}`;
           
           if (weatherResult.temperatureTrend) {
-            weatherInfo += `Today's temperature range: ${weatherResult.temperatureTrend.low}°F to ${weatherResult.temperatureTrend.high}°F (${weatherResult.temperatureTrend.trend}). `;
+            weatherInfo += ` (feels like ${Math.round(weatherResult.main.feels_like)}°F). High today: ${weatherResult.temperatureTrend.high}°F`;
           }
           
           if (weatherResult.hourlyForecast && weatherResult.hourlyForecast.length > 0) {
-            const nextHours = weatherResult.hourlyForecast.slice(1, 4);
-            weatherInfo += `Next few hours: ${nextHours.map(f => `${f.timeString}: ${f.temperature}°F, ${f.weatherDescription}`).join(', ')}. `;
+            const nextHours = weatherResult.hourlyForecast.slice(1, 3);
+            weatherInfo += `. Next few hours: ${nextHours.map(f => `${f.timeString}: ${f.temperature}°F`).join(', ')}`;
           }
           
           if (weatherResult.precipitation?.summary?.today?.length > 0) {
-            weatherInfo += `Rain chances today: ${weatherResult.precipitation.summary.today.map(p => `${p.time} (${p.probability}%)`).join(', ')}. `;
+            const rainChances = weatherResult.precipitation.summary.today.slice(0, 2);
+            weatherInfo += `. Rain chances: ${rainChances.map(p => `${p.time} (${p.probability}%)`).join(', ')}`;
           }
           
-          weatherInfo += `Wind: ${weatherResult.wind?.summary?.current || weatherResult.wind?.speed || 0} mph. `;
-          
-          contextInfo.push(weatherInfo);
+          contextInfo.push(`Weather: ${weatherInfo}`);
         } catch (err) {
           // Silent error handling
         }
       }
 
-      // Process calendar data
+      // Process calendar data - more concise
       if (calendarResult) {
         try {
           const currentDate = new Date().toDateString();
@@ -340,51 +362,34 @@ function WakeWord() {
               ? new Date(event.start.dateTime)
               : new Date(event.start.date);
             return eventDate > currentTime;
-          }).slice(0, 5);
+          }).slice(0, 3);
 
-          let calendarInfo = `Calendar events for today (${currentDate}): `;
+          let calendarInfo = `Today's events: `;
           if (todayEvents.length > 0) {
-            calendarInfo += todayEvents.map(event => {
+            calendarInfo += todayEvents.slice(0, 3).map(event => {
               if (event.start.dateTime) {
                 const eventTime = new Date(event.start.dateTime);
-                const timeUntil = eventTime - currentTime;
-                const hoursUntil = Math.floor(timeUntil / (1000 * 60 * 60));
-                const minutesUntil = Math.floor((timeUntil % (1000 * 60 * 60)) / (1000 * 60));
-                
-                let timeInfo = `${eventTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
-                if (timeUntil > 0) {
-                  timeInfo += ` (in ${hoursUntil > 0 ? hoursUntil + 'h ' : ''}${minutesUntil}m)`;
-                } else if (timeUntil < 0) {
-                  timeInfo += ` (${Math.abs(hoursUntil)}h ${Math.abs(minutesUntil)}m ago)`;
-                } else {
-                  timeInfo += ` (now)`;
-                }
-                return `${event.summary} at ${timeInfo}`;
+                return `${event.summary} at ${eventTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
               } else {
                 return `${event.summary} (all day)`;
               }
             }).join(', ');
           } else {
-            calendarInfo += 'No events scheduled for today.';
+            calendarInfo += 'none scheduled';
           }
 
           if (upcomingEvents.length > 0) {
-            calendarInfo += ` Upcoming events: ${upcomingEvents.map(event => {
+            calendarInfo += `. Upcoming: ${upcomingEvents.map(event => {
               const eventDate = event.start.dateTime 
                 ? new Date(event.start.dateTime)
                 : new Date(event.start.date);
               const daysUntil = Math.floor((eventDate - currentTime) / (1000 * 60 * 60 * 24));
               
               let dateInfo;
-              if (daysUntil === 0) {
-                dateInfo = 'today';
-              } else if (daysUntil === 1) {
-                dateInfo = 'tomorrow';
-              } else if (daysUntil < 7) {
-                dateInfo = `in ${daysUntil} days`;
-              } else {
-                dateInfo = `on ${eventDate.toLocaleDateString()}`;
-              }
+              if (daysUntil === 0) dateInfo = 'today';
+              else if (daysUntil === 1) dateInfo = 'tomorrow';
+              else if (daysUntil < 7) dateInfo = `in ${daysUntil} days`;
+              else dateInfo = `on ${eventDate.toLocaleDateString()}`;
               
               return `${event.summary} ${dateInfo}`;
             }).join(', ')}`;
@@ -396,9 +401,9 @@ function WakeWord() {
         }
       }
 
-      // Combine all context with the user's question
+      // Combine all context with the user's question - more concise
       if (contextInfo.length > 0) {
-        finalPrompt = `Context: ${contextInfo.join(' ')}. User question: ${text}`;
+        finalPrompt = `${contextInfo.join('. ')}. Question: ${text}`;
       }
 
       const response = await getGPT(finalPrompt);
@@ -412,9 +417,9 @@ function WakeWord() {
       await speakText(response);
       
       // Auto-reset after response - this will restart listening for wake word
-      setTimeout(() => {
-        resetRecognition();
-      }, 8000); // Increased to 8 seconds so you can see the response
+      // setTimeout(() => {
+      //   resetRecognition();
+      // }, 8000); // Increased to 8 seconds so you can see the response
       
     } catch (error) {
       const errorMessage = 'Sorry, I encountered an error processing your request.';
@@ -425,9 +430,7 @@ function WakeWord() {
       // Speak the error message
       await speakText(errorMessage);
       
-      setTimeout(() => {
-        resetRecognition();
-      }, 3000);
+      // The speakText function will handle the reset timing
     }
   };
   
@@ -462,23 +465,6 @@ function WakeWord() {
               </div>
             )}
             
-            {engines.length > 0 && (
-              <div className="engine-selection">
-                <label htmlFor="engine-select">Engine: </label>
-                <select 
-                  id="engine-select"
-                  value={selectedEngine}
-                  onChange={(e) => handleEngineChange(e.target.value)}
-                  disabled={isSpeaking}
-                >
-                  {engines.map(engine => (
-                    <option key={engine.id} value={engine.id}>
-                      {engine.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
           </div>
         </div>
       ) : (
@@ -505,7 +491,7 @@ function WakeWord() {
           {isSpeaking && (
             <div className="speaking">
               <div className="speaking-indicator">🔊</div>
-              <p>Speaking with {selectedEngine} engine...</p>
+              <p>Speaking with generative engine...</p>
             </div>
           )}
           
