@@ -9,12 +9,15 @@
     "start": "react-scripts start"
   },
   "dependencies": {
+    "@googleapis/calendar": "^10.0.1",
     "axios": "^1.9.0",
-    "express": "^5.1.0",
+    "google": "^2.1.0",
+    "googleapis": "^149.0.0",
     "react": "^18.3.1",
     "react-calendar": "^5.1.0",
     "react-dom": "^18.3.1",
-    "react-scripts": "^5.0.1"
+    "react-scripts": "^5.0.1",
+    "react-speech-recognition": "^4.0.1"
   },
   "browserslist": {
     "production": [

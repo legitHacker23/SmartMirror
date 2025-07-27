@@ -2,7 +2,7 @@ import React from 'react';
 import CreateClock from './components/CreateClock';
 import CreateWeather from './components/CreateWeather';
 import CreateCalendar from './components/CreateCalendar';
-import CreateGpt from './components/CreateGpt';
+import WakeWord from './components/WakeWord';
 import './style.css';
 
 function App() {
@@ -13,8 +13,8 @@ function App() {
         <CreateCalendar />
         <CreateWeather />
       </div>
-      <CreateGpt />
-    </div>
+      <WakeWord />
+      </div>
   );
 };
 
