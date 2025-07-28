@@ -25,35 +25,87 @@ const CreateCalendar = () => {
     fetchCalendar();
   }, []);
 
-  // Format date for display
+  // Format time for display
   const formatEventTime = (event) => {
     if (event.start.dateTime) {
-      return new Date(event.start.dateTime).toLocaleString();
+      const eventDate = new Date(event.start.dateTime);
+      const timeString = eventDate.toLocaleTimeString([], { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+      const dateString = eventDate.toLocaleDateString([], {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+      });
+      return `${dateString} at ${timeString}`;
     } else if (event.start.date) {
-      return new Date(event.start.date).toLocaleDateString();
+      const eventDate = new Date(event.start.date);
+      return eventDate.toLocaleDateString([], {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+      });
     }
     return 'No time specified';
   };
 
+  // Get event start time for sorting
+  const getEventStartTime = (event) => {
+    if (event.start.dateTime) {
+      return new Date(event.start.dateTime);
+    } else if (event.start.date) {
+      return new Date(event.start.date);
+    }
+    return new Date(0); // Fallback for events without time
+  };
+
+  // Sort events by proximity to current time
+  const sortEventsByProximity = (eventsList) => {
+    const now = new Date();
+    return eventsList.sort((a, b) => {
+      const timeA = getEventStartTime(a);
+      const timeB = getEventStartTime(b);
+      
+      // If both events are in the future, sort by closest first
+      if (timeA > now && timeB > now) {
+        return timeA - timeB;
+      }
+      
+      // If both events are in the past, sort by most recent first
+      if (timeA < now && timeB < now) {
+        return timeB - timeA;
+      }
+      
+      // If one is past and one is future, future events come first
+      if (timeA > now && timeB < now) return -1;
+      if (timeA < now && timeB > now) return 1;
+      
+      return 0;
+    });
+  };
+
   // Filter events for current date
   const getEventsForCurrentDate = () => {
-    return events.filter(event => {
+    const currentDateEvents = events.filter(event => {
       const eventDate = event.start.dateTime 
         ? new Date(event.start.dateTime).toDateString()
         : new Date(event.start.date).toDateString();
       return eventDate === currentDate.toDateString();
     });
+    return sortEventsByProximity(currentDateEvents);
   };
 
   // Filter events for upcoming dates (future events only)
   const getUpcomingEvents = () => {
     const now = new Date();
-    return events.filter(event => {
+    const upcomingEvents = events.filter(event => {
       const eventDate = event.start.dateTime 
         ? new Date(event.start.dateTime)
         : new Date(event.start.date);
       return eventDate > now;
-    }).slice(0, 5); // Limit to 5 upcoming events
+    });
+    return sortEventsByProximity(upcomingEvents).slice(0, 5); // Limit to 5 upcoming events
   };
 
   if (loading) {

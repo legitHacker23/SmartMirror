@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { getGPT } from "../apiHandlers/gptapi";
 import { getWeather } from "../apiHandlers/weatherapi";
 import { getCalendar } from "../apiHandlers/calendarapi";
-import { textToSpeech, stopSpeaking as stopTTS, getVoices } from "../apiHandlers/ttsapi";
+import { textToSpeech, stopSpeaking as stopTTS } from "../apiHandlers/ttsapi";
 
 function WakeWord() {
   const [isListening, setIsListening] = useState(false);
@@ -11,8 +11,6 @@ function WakeWord() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [wakeWordDetected, setWakeWordDetected] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [voices, setVoices] = useState([]);
-  const [selectedVoice, setSelectedVoice] = useState('');
   
   const recognition = useRef(null);
   const wakeWord = 'hey mirror';
@@ -41,27 +39,13 @@ function WakeWord() {
     }
   };
 
-  // Load available voices and engines
-  const loadVoices = async () => {
-    try {
-      const availableVoices = await getVoices();
-      setVoices(availableVoices);
-      // Set default voice to first available voice
-      if (availableVoices.length > 0 && !selectedVoice) {
-        setSelectedVoice(availableVoices[0].voice_id);
-      }
-    } catch (error) {
-      console.error('Failed to load voices:', error);
-    }
-  };
-
   const speakText = async (text) => {
     try {
       setIsSpeaking(true);
       console.log('Attempting to speak with Puter.js:', text);
       
-      // Use Puter.js TTS with selected engine and callback to reset after completion
-      await textToSpeech(text, selectedVoice, () => {
+      // Use Puter.js TTS with default voice and callback to reset after completion
+      await textToSpeech(text, null, () => {
         setIsSpeaking(false);
         // Reset recognition only after TTS is completely done
         setTimeout(() => {
@@ -192,9 +176,6 @@ function WakeWord() {
   }, []);
 
   useEffect(() => {
-    // Load voices and engines when component mounts
-    loadVoices();
-    
     // Add user interaction handler to enable audio
     const enableAudio = () => {
       // Create a silent audio context to enable audio playback
@@ -444,28 +425,6 @@ function WakeWord() {
           <p className="wake-text">
             Say "{wakeWord}" to activate
           </p>
-          
-          {/* Voice and Engine Selection */}
-          <div className="settings-container">
-            {voices.length > 0 && (
-              <div className="voice-selection">
-                <label htmlFor="voice-select">Voice: </label>
-                <select 
-                  id="voice-select"
-                  value={selectedVoice}
-                  onChange={(e) => setSelectedVoice(e.target.value)}
-                  disabled={isSpeaking}
-                >
-                  {voices.map(voice => (
-                    <option key={voice.voice_id} value={voice.voice_id}>
-                      {voice.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-            
-          </div>
         </div>
       ) : (
         <div className="conversation-interface">
@@ -491,43 +450,9 @@ function WakeWord() {
           {isSpeaking && (
             <div className="speaking">
               <div className="speaking-indicator">🔊</div>
-              <p>Speaking with generative engine...</p>
+              <p>Speaking...</p>
             </div>
           )}
-          
-          {llmResponse && !isProcessing && llmResponse !== 'Listening...' && (
-            <div className="response-section">
-              <h4>Assistant:</h4>
-              <div className="response">{llmResponse}</div>
-            </div>
-          )}
-          
-          <div className="button-container">
-            {transcript && !isProcessing && (
-              <button 
-                onClick={() => processTranscript(currentTranscript.current)}
-                className="submit-btn"
-              >
-                Submit Question
-              </button>
-            )}
-            
-            {isSpeaking && (
-              <button 
-                onClick={stopSpeaking}
-                className="stop-speaking-btn"
-              >
-                🔇 Stop Speaking
-              </button>
-            )}
-            
-            <button 
-              onClick={resetRecognition}
-              className="end-conversation-btn"
-            >
-              End Conversation
-            </button>
-          </div>
         </div>
       )}
     </div>

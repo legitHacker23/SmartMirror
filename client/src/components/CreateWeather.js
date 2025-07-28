@@ -125,7 +125,7 @@ function CreateWeather() {
 
   return (
     <div className="weather-container">
-      <h2>Weather</h2>
+      <h2>Current Weather</h2>
       
       <div className="weather-main">
         <div className="current-weather">
@@ -157,22 +157,40 @@ function CreateWeather() {
           </div>
           
           <div className="detail-item">
-            <span className="detail-label">Rain Chance  </span>
+            <span className="detail-label">Rain Chance</span>
             <span className="detail-value">{Math.round(weather.precipitation?.current || 0)}%</span>
           </div>
         </div>
 
         <div className="weather-location">
           <span className="location-name">{weather.name}</span>
-          <span className="location-time">
-            {formatTime(weather.dt)}
-          </span>
           {lastUpdated && (
             <span style={{fontSize: '0.8em', color: 'rgba(255,255,255,0.6)'}}>
               Updated: {lastUpdated.toLocaleTimeString()}
             </span>
           )}
         </div>
+
+        {/* 3-Day Forecast Tabs */}
+        {weather.dailyForecast && weather.dailyForecast.length > 0 && (
+          <div className="forecast-tabs">
+            {weather.dailyForecast.map((day, index) => (
+              <div key={index} className={`forecast-tab forecast-tab-${index + 1}`}>
+                <div className="forecast-day">{day.dayName}</div>
+                <div className="forecast-icon">
+                  {getWeatherIcon(day.weather.id)}
+                </div>
+                <div className="forecast-temp">
+                  <span className="forecast-low">{day.low}°</span>
+                  <span className="forecast-high">{day.high}°</span>
+                </div>
+                <div className="forecast-precipitation">
+                  {day.precipitation}%
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
