@@ -1,20 +1,20 @@
-// Coqui TTS Local Server API implementation
+// Google TTS Local Server API implementation
 let currentAudio = null;
 
-// Local Coqui TTS text-to-speech implementation
+// Local Google TTS text-to-speech implementation
 export async function textToSpeech(text, voiceName = null, onEnd = null) {
   try {
     // Cancel any ongoing speech
     stopSpeaking();
 
-    console.log('=== Coqui TTS DEBUG ===');
+    console.log('=== Google TTS DEBUG ===');
     console.log('Text type:', typeof text);
     console.log('Text length:', text ? text.length : 'null/undefined');
     console.log('Text content:', text);
     console.log('Text preview (first 100 chars):', text ? text.substring(0, 100) : 'null/undefined');
     console.log('=====================');
 
-    console.log('Starting Coqui TTS:', text);
+    console.log('Starting Google TTS:', text);
     
     // Call local TTS server
     const response = await fetch('http://localhost:5001/tts', {
@@ -27,7 +27,7 @@ export async function textToSpeech(text, voiceName = null, onEnd = null) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(`Coqui TTS server error: ${response.status} - ${errorData.error || 'Unknown error'}`);
+      throw new Error(`Google TTS server error: ${response.status} - ${errorData.error || 'Unknown error'}`);
     }
 
     // Get audio blob
@@ -40,28 +40,28 @@ export async function textToSpeech(text, voiceName = null, onEnd = null) {
     
     // Set up event handlers
     audio.addEventListener('ended', () => {
-      console.log('Coqui TTS speech ended');
+      console.log('Google TTS speech ended');
       URL.revokeObjectURL(audioUrl);
       currentAudio = null;
       if (onEnd) onEnd();
     });
 
     audio.addEventListener('error', (error) => {
-      console.error('Coqui TTS speech error:', error);
+      console.error('Google TTS speech error:', error);
       URL.revokeObjectURL(audioUrl);
       currentAudio = null;
       if (onEnd) onEnd();
     });
 
     audio.addEventListener('pause', () => {
-      console.log('Coqui TTS speech paused');
+      console.log('Google TTS speech paused');
       URL.revokeObjectURL(audioUrl);
       currentAudio = null;
       if (onEnd) onEnd();
     });
 
     audio.addEventListener('abort', () => {
-      console.log('Coqui TTS speech aborted');
+      console.log('Google TTS speech aborted');
       URL.revokeObjectURL(audioUrl);
       currentAudio = null;
       if (onEnd) onEnd();
@@ -70,9 +70,9 @@ export async function textToSpeech(text, voiceName = null, onEnd = null) {
     // Play the audio with error handling for autoplay restrictions
     try {
       await audio.play();
-      console.log('Coqui TTS audio started successfully');
+      console.log('Google TTS audio started successfully');
     } catch (playError) {
-      console.error('Failed to play Coqui TTS audio:', playError);
+      console.error('Failed to play Google TTS audio:', playError);
       
       // If it's an autoplay restriction, try to enable audio context
       if (playError.name === 'NotAllowedError') {
@@ -85,7 +85,7 @@ export async function textToSpeech(text, voiceName = null, onEnd = null) {
     
     return audio;
   } catch (error) {
-    console.error('Coqui TTS error:', error);
+    console.error('Google TTS error:', error);
     throw error;
   }
 }
