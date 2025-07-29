@@ -43,9 +43,9 @@ function WakeWord() {
   const speakText = async (text) => {
     try {
       setIsSpeaking(true);
-      console.log('Attempting to speak with Puter.js:', text);
+      console.log('Attempting to speak with Coqui TTS:', text);
       
-      // Use Puter.js TTS with default voice and callback to reset after completion
+      // Use Coqui TTS with default voice and callback to reset after completion
       await textToSpeech(text, null, () => {
         setIsSpeaking(false);
         // Reset recognition only after TTS is completely done
@@ -54,10 +54,10 @@ function WakeWord() {
         }, 2000); // Small delay to show the response before resetting
       });
       
-      console.log('Puter.js audio started playing');
+      console.log('Coqui TTS audio started playing');
       
     } catch (error) {
-      console.error('Puter.js TTS error:', error);
+      console.error('Coqui TTS error:', error);
       setIsSpeaking(false);
       
       // Handle autoplay restriction error
@@ -77,7 +77,7 @@ function WakeWord() {
   };
 
   const stopSpeaking = () => {
-    // Stop Puter.js TTS
+    // Stop Coqui TTS
     stopTTS();
     setIsSpeaking(false);
   };

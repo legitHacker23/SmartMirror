@@ -9,6 +9,7 @@
     "start": "react-scripts start"
   },
   "dependencies": {
+    "@google/genai": "^1.0.0",
     "@googleapis/calendar": "^10.0.1",
     "axios": "^1.9.0",
     "google": "^2.1.0",

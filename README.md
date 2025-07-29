@@ -1,6 +1,6 @@
 # Smart Mirror
 
-A smart mirror application with weather, calendar, GPT integration, and voice capabilities.
+A smart mirror application with weather, calendar, AI assistant integration, and voice capabilities.
 
 ## Project Structure
 
@@ -12,7 +12,7 @@ A smart mirror application with weather, calendar, GPT integration, and voice ca
 ### Prerequisites
 
 - Node.js and npm
-- Ollama (for GPT functionality)
+- Google AI Studio API key (for Gemini 2.0 Flash Lite functionality)
 - ElevenLabs API key (for text-to-speech)
 
 ### Backend Setup
@@ -52,7 +52,12 @@ cd client
 npm install
 ```
 
-3. Start the React development server:
+3. Configure your Google API key:
+   - Open `client/src/apiHandlers/gptapi.js`
+   - Replace `'YOUR_GOOGLE_API_KEY_HERE'` with your actual Google API key
+   - Get your API key from [https://makersuite.google.com/app/apikey](https://makersuite.google.com/app/apikey)
+
+4. Start the React development server:
 ```bash
 npm start
 ```
@@ -77,7 +82,7 @@ npm start
 
 - **Weather Display** - Current weather and forecast
 - **Calendar Integration** - Google Calendar events
-- **GPT Assistant** - AI-powered responses using Ollama
+- **AI Assistant** - AI-powered responses using Google Gemini 2.0 Flash Lite
 - **Text-to-Speech** - Voice output using ElevenLabs
 - **Wake Word Detection** - Voice activation
 
@@ -85,6 +90,6 @@ npm start
 
 - `GET /api/weather` - Get weather data
 - `GET /api/calendar` - Get calendar events  
-- `POST /api/gpt` - Get GPT response
+- `POST /api/gpt` - Get AI response
 - `POST /api/tts` - Convert text to speech
 - `GET /api/voices` - Get available TTS voices 
