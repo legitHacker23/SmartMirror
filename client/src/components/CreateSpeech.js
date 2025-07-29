@@ -3,6 +3,7 @@ import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognitio
 import { getGPT } from "../apiHandlers/gptapi";
 import { getWeather } from "../apiHandlers/weatherapi";
 import { getCalendar } from "../apiHandlers/calendarapi";
+import { getStockPrice, getMultipleStockPrices } from "../apiHandlers/stocksapi";
 import { textToSpeech, getVoices, stopSpeaking } from "../apiHandlers/ttsapi";
 
 function CreateSpeech() {
@@ -123,6 +124,46 @@ function CreateSpeech() {
           contextInfo.push(weatherInfo);
         } catch (err) {
           console.error('Weather fetch failed:', err);
+        }
+      }
+
+      // Check for stock-related questions
+      if (/stock|market|price|trading|invest|portfolio|shares|equity|finance|financial|nasdaq|dow|s&p|spy|aapl|googl|msft|tsla|amzn/i.test(text.toLowerCase())) {
+        try {
+          // Get popular stocks for context
+          const popularStocks = ['SPY', 'AAPL', 'GOOGL', 'MSFT'];
+          const stockData = await getMultipleStockPrices(popularStocks);
+          
+          // Filter out failed requests
+          const validStocks = stockData.filter(stock => !stock.error);
+          
+          if (validStocks.length > 0) {
+            let stockInfo = `Stock market: `;
+            
+            // Add market status
+            const now = new Date();
+            const etTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+            const dayOfWeek = etTime.getDay();
+            const hour = etTime.getHours();
+            const minute = etTime.getMinutes();
+            const currentTime = hour * 100 + minute;
+            
+            const isMarketOpen = (dayOfWeek !== 0 && dayOfWeek !== 6) && (currentTime >= 930 && currentTime <= 1600);
+            stockInfo += `Market is ${isMarketOpen ? 'open' : 'closed'}. `;
+            
+            // Add stock data
+            const stockSummaries = validStocks.map(stock => {
+              const changeIcon = stock.change > 0 ? '↗' : stock.change < 0 ? '↘' : '→';
+              const changeText = stock.change > 0 ? '+' : '';
+              return `${stock.symbol} $${stock.price.toFixed(2)} ${changeIcon}${changeText}${stock.change.toFixed(2)} (${changeText}${stock.changePercent.toFixed(2)}%)`;
+            });
+            
+            stockInfo += `Key stocks: ${stockSummaries.join(', ')}.`;
+            
+            contextInfo.push(stockInfo);
+          }
+        } catch (err) {
+          console.error('Stock fetch failed:', err);
         }
       }
 

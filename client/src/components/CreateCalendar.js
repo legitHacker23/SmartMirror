@@ -29,23 +29,12 @@ const CreateCalendar = () => {
   const formatEventTime = (event) => {
     if (event.start.dateTime) {
       const eventDate = new Date(event.start.dateTime);
-      const timeString = eventDate.toLocaleTimeString([], { 
+      return eventDate.toLocaleTimeString([], { 
         hour: '2-digit', 
         minute: '2-digit' 
       });
-      const dateString = eventDate.toLocaleDateString([], {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric'
-      });
-      return `${dateString} at ${timeString}`;
     } else if (event.start.date) {
-      const eventDate = new Date(event.start.date);
-      return eventDate.toLocaleDateString([], {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric'
-      });
+      return 'All day';
     }
     return 'No time specified';
   };
@@ -96,14 +85,18 @@ const CreateCalendar = () => {
     return sortEventsByProximity(currentDateEvents);
   };
 
-  // Filter events for upcoming dates (future events only)
+  // Filter events for upcoming dates (future events only, excluding today)
   const getUpcomingEvents = () => {
     const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0); // Start of tomorrow
+    
     const upcomingEvents = events.filter(event => {
       const eventDate = event.start.dateTime 
         ? new Date(event.start.dateTime)
         : new Date(event.start.date);
-      return eventDate > now;
+      return eventDate >= tomorrow; // Only include events from tomorrow onwards
     });
     return sortEventsByProximity(upcomingEvents).slice(0, 5); // Limit to 5 upcoming events
   };
@@ -131,10 +124,9 @@ const CreateCalendar = () => {
 
   return (
     <div className="calendar-container">
-      <h2>Upcoming Events for {currentDate.toDateString()}</h2>
+      <h2>Events for {currentDate.toDateString()}</h2>
       
       <div className="events-panel">
-        <h3>Events for {currentDate.toDateString()}</h3>
         {currentDateEvents.length === 0 ? (
           <p>No events for this date.</p>
         ) : (

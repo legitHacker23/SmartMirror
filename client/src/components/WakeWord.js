@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { getGPT } from "../apiHandlers/gptapi";
 import { getWeather } from "../apiHandlers/weatherapi";
 import { getCalendar } from "../apiHandlers/calendarapi";
+import { getStockPrice, getMultipleStockPrices } from "../apiHandlers/stocksapi";
 import { textToSpeech, stopSpeaking as stopTTS } from "../apiHandlers/ttsapi";
 
 function WakeWord() {
@@ -265,9 +266,10 @@ function WakeWord() {
       })}.`;
       contextInfo.push(currentTimeInfo);
 
-      // Check for weather and calendar related questions - make API calls in parallel
+      // Check for weather, calendar, and stock related questions - make API calls in parallel
       const needsWeather = /weather|temperature|forecast|rain|sunny|cloudy|windy/i.test(text.toLowerCase());
       const needsCalendar = /calendar|event|schedule|meeting|appointment|today|tomorrow|upcoming/i.test(text.toLowerCase());
+      const needsStocks = /stock|market|price|trading|invest|portfolio|shares|equity|finance|financial|nasdaq|dow|s&p|spy|aapl|googl|msft|tsla|amzn/i.test(text.toLowerCase());
 
       // Make API calls in parallel for better performance
       const apiPromises = [];
@@ -287,17 +289,30 @@ function WakeWord() {
           })
         );
       }
+      
+      if (needsStocks) {
+        apiPromises.push(
+          getMultipleStockPrices(['SPY', 'AAPL', 'GOOGL', 'MSFT']).catch(err => {
+            return null;
+          })
+        );
+      }
 
       // Wait for all API calls to complete
       const results = await Promise.all(apiPromises);
       let weatherResult = null;
       let calendarResult = null;
+      let stocksResult = null;
       
-      if (needsWeather && results.length > 0) {
-        weatherResult = results[0];
+      let resultIndex = 0;
+      if (needsWeather && results.length > resultIndex) {
+        weatherResult = results[resultIndex++];
       }
-      if (needsCalendar) {
-        calendarResult = needsWeather ? results[1] : results[0];
+      if (needsCalendar && results.length > resultIndex) {
+        calendarResult = results[resultIndex++];
+      }
+      if (needsStocks && results.length > resultIndex) {
+        stocksResult = results[resultIndex++];
       }
 
       // Process weather data - more concise
@@ -377,6 +392,36 @@ function WakeWord() {
           }
 
           contextInfo.push(calendarInfo);
+        } catch (err) {
+          // Silent error handling
+        }
+      }
+
+      // Process stock data
+      if (stocksResult) {
+        try {
+          const validStocks = stocksResult.filter(stock => !stock.error);
+          
+          if (validStocks.length > 0) {
+            // Add market status
+            const now = new Date();
+            const etTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+            const dayOfWeek = etTime.getDay();
+            const hour = etTime.getHours();
+            const minute = etTime.getMinutes();
+            const currentTime = hour * 100 + minute;
+            
+            const isMarketOpen = (dayOfWeek !== 0 && dayOfWeek !== 6) && (currentTime >= 930 && currentTime <= 1600);
+            
+            // Create concise stock summary
+            const stockSummaries = validStocks.slice(0, 3).map(stock => {
+              const changeIcon = stock.change > 0 ? '↗' : stock.change < 0 ? '↘' : '→';
+              const changeText = stock.change > 0 ? '+' : '';
+              return `${stock.symbol} $${stock.price.toFixed(2)} ${changeIcon}${changeText}${stock.changePercent.toFixed(1)}%`;
+            });
+            
+            contextInfo.push(`Market ${isMarketOpen ? 'open' : 'closed'}: ${stockSummaries.join(', ')}`);
+          }
         } catch (err) {
           // Silent error handling
         }

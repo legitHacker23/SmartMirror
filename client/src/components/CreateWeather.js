@@ -125,7 +125,7 @@ function CreateWeather() {
 
   return (
     <div className="weather-container">
-      <h2>Current Weather</h2>
+      <h2>Weather</h2>
       
       <div className="weather-main">
         <div className="current-weather">

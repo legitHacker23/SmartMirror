@@ -32,31 +32,8 @@ Respond naturally and concisely:`;
   } catch (error) {
     console.error('Error calling Ollama:', error);
     
-    // Provide fallback responses based on the prompt content
-    const lowerPrompt = prompt.toLowerCase();
-    
-    if (lowerPrompt.includes('weather') || lowerPrompt.includes('temperature')) {
-      return "It's currently 65°F with partly cloudy skies - perfect weather for getting outside!";
-    }
-    
-    if (lowerPrompt.includes('calendar') || lowerPrompt.includes('schedule') || lowerPrompt.includes('event')) {
-      return "You've got a few meetings today and some events coming up this week. Want me to give you the details on any specific one?";
-    }
-    
-    if (lowerPrompt.includes('time') || lowerPrompt.includes('hour')) {
-      const now = new Date();
-      return `It's ${now.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit', 
-        hour12: true 
-      })} right now.`;
-    }
-    
-    if (lowerPrompt.includes('hello') || lowerPrompt.includes('hi')) {
-      return "Hey there! I'm your smart mirror assistant. I can help with weather, calendar stuff, and answer your questions. What's up?";
-    }
-    
-    return "I'm here to help! I can tell you about the weather, your calendar, or answer questions. What do you need?";
+    // Provide fallback response when chat is not connected
+    return "The chat is not connected right now";
   }
 };
 
