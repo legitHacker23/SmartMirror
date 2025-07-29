@@ -468,7 +468,7 @@ function WakeWord() {
             🎤
           </div>
           <p className="wake-text">
-            Say "{wakeWord}" to activate
+            Say "{wakeWord}" to activate mirror assistant
           </p>
         </div>
       ) : (
