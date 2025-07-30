@@ -22,12 +22,32 @@ function WakeWord() {
   const isProcessingRef = useRef(false);
 
   const startListening = () => {
-    if (recognition.current && !isProcessingRef.current) {
+    console.log('Attempting to start listening...');
+    console.log('Is processing:', isProcessingRef.current);
+    console.log('Is active:', isActive.current);
+    
+    // Don't start if already processing or in active conversation
+    if (isProcessingRef.current || isActive.current) {
+      console.log('Cannot start listening - processing or in active conversation');
+      return;
+    }
+    
+    if (recognition.current) {
       try {
         recognition.current.start();
+        console.log('✅ Listening started successfully');
       } catch (error) {
-        // Handle start errors silently
+        console.error('❌ Failed to start listening:', error);
+        // Don't immediately retry on error - wait longer
+        setTimeout(() => {
+          if (!isProcessingRef.current && !isActive.current) {
+            console.log('Retrying speech recognition after error...');
+            startListening();
+          }
+        }, 3000);
       }
+    } else {
+      console.log('❌ Recognition object not available');
     }
   };
 
@@ -178,12 +198,20 @@ function WakeWord() {
       };
       
       recognition.current.onend = () => {
-        // Speech recognition ended - only restart if not processing
-        if (!isProcessingRef.current) {
-          // Restart listening after a short delay
+        console.log('Speech recognition ended');
+        
+        // ONLY restart if we're not processing AND not in active conversation
+        if (!isProcessingRef.current && !isActive.current) {
+          console.log('Restarting speech recognition for wake word detection...');
+          // Add a longer delay to prevent rapid cycling
           setTimeout(() => {
-            startListening();
-          }, 1000);
+            // Double-check we're still not processing or active before restarting
+            if (!isProcessingRef.current && !isActive.current) {
+              startListening();
+            }
+          }, 2000); // Increased delay to 2 seconds
+        } else {
+          console.log('NOT restarting - processing or in active conversation');
         }
       };
       
@@ -248,16 +276,28 @@ function WakeWord() {
   };
 
   const resetRecognition = () => {
+    console.log('Resetting recognition...');
+    
     // Stop any ongoing speech
     stopSpeaking();
     
+    // Stop recognition first
+    if (recognition.current) {
+      try {
+        recognition.current.stop();
+      } catch (error) {
+        console.log('Error stopping recognition during reset:', error);
+      }
+    }
+    
+    // Reset all state
     isActive.current = false;
     setIsListening(false);
     setWakeWordDetected(false);
     setTranscript('');
     currentTranscript.current = '';
-    setLlmResponse(''); // Clear response when resetting
-    setIsProcessing(false); // Make sure processing is also reset
+    setLlmResponse('');
+    setIsProcessing(false);
     isProcessingRef.current = false;
     
     // Clear all timers
@@ -270,8 +310,13 @@ function WakeWord() {
       wakeWordTimeout.current = null;
     }
     
-    // Restart listening for wake word
-    startListening();
+    // Wait a bit before restarting to prevent rapid cycling
+    setTimeout(() => {
+      if (!isProcessingRef.current && !isActive.current) {
+        console.log('Restarting recognition after reset...');
+        startListening();
+      }
+    }, 1000);
   };
 
   const processTranscript = async (text) => {
