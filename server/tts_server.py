@@ -15,8 +15,8 @@ app = Flask(__name__)
 # Configure CORS for production
 # Allow requests from your Netlify domain
 allowed_origins = [
-    # "http://localhost:3000",  # Local development
-    "https://smartmagicmirror.netlify.app",  # Replace with your actual Netlify URL
+    "http://localhost:3000",  # Local development
+    # "https://smartmagicmirror.netlify.app",  # Replace with your actual Netlify URL
     # "https://*.netlify.app"  # Allow all Netlify subdomains
 ]
 
