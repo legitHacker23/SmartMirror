@@ -11,14 +11,24 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-CORS(app)
+
+# Configure CORS for production
+# Allow requests from your Netlify domain
+allowed_origins = [
+    # "http://localhost:3000",  # Local development
+    "https://smartmagicmirror.netlify.app",  # Replace with your actual Netlify URL
+    # "https://*.netlify.app"  # Allow all Netlify subdomains
+]
+
+CORS(app, origins=allowed_origins, methods=["GET", "POST", "OPTIONS"])
 
 @app.route('/health', methods=['GET'])
 def health_check():
     return jsonify({
         'status': 'healthy',
         'engine': 'gTTS (Google Text-to-Speech)',
-        'description': 'Google Text-to-Speech API for high-quality speech synthesis'
+        'description': 'Google Text-to-Speech API for high-quality speech synthesis',
+        'environment': os.getenv('RENDER_ENVIRONMENT', 'development')
     })
 
 @app.route('/tts', methods=['POST'])
@@ -128,6 +138,9 @@ def change_voice():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    logger.info("Starting gTTS server on http://localhost:5001")
+    port = int(os.environ.get('PORT', 5001))
+    debug = os.environ.get('FLASK_ENV') == 'development'
+    
+    logger.info(f"Starting gTTS server on port {port}")
     logger.info("Engine: Google Text-to-Speech (gTTS)")
-    app.run(host='0.0.0.0', port=5001, debug=True) 
+    app.run(host='0.0.0.0', port=port, debug=debug) 

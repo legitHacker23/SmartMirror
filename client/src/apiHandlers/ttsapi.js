@@ -1,5 +1,5 @@
 // gTTS (Google Text-to-Speech) implementation
-const TTS_SERVER_URL = 'http://localhost:5001';
+const TTS_SERVER_URL = process.env.REACT_APP_TTS_SERVER_URL || 'http://localhost:5001';
 
 let currentAudio = null;
 
@@ -15,6 +15,7 @@ export async function textToSpeech(text, voiceName = null, onEnd = null) {
     console.log('Text content:', text);
     console.log('Text preview (first 100 chars):', text ? text.substring(0, 100) : 'null/undefined');
     console.log('Voice:', voiceName);
+    console.log('Server URL:', TTS_SERVER_URL);
     console.log('=====================');
 
     console.log('Starting gTTS:', text);
@@ -196,14 +197,16 @@ export async function checkTTSHealth() {
       status: 'healthy', 
       engine: 'gTTS',
       available: true,
-      description: data.description || 'Google Text-to-Speech API'
+      description: data.description || 'Google Text-to-Speech API',
+      serverUrl: TTS_SERVER_URL
     };
   } catch (error) {
     return { 
       status: 'unhealthy', 
       error: error.message,
       available: false,
-      description: 'gTTS server not available'
+      description: 'gTTS server not available',
+      serverUrl: TTS_SERVER_URL
     };
   }
 }
