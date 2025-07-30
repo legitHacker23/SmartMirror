@@ -18,6 +18,7 @@ function WakeWord() {
   const isActive = useRef(false);
   const currentTranscript = useRef('');
   const inactivityTimer = useRef(null);
+  const wakeWordTimeout = useRef(null); // New timer for wake word timeout
   const isProcessingRef = useRef(false);
 
   const startListening = () => {
@@ -82,6 +83,28 @@ function WakeWord() {
     setIsSpeaking(false);
   };
 
+  // Function to start the 5-second wake word timeout
+  const startWakeWordTimeout = () => {
+    // Clear any existing wake word timeout
+    if (wakeWordTimeout.current) {
+      clearTimeout(wakeWordTimeout.current);
+    }
+    
+    // Set 5-second timeout
+    wakeWordTimeout.current = setTimeout(() => {
+      console.log('Wake word timeout - no speech detected for 5 seconds');
+      resetRecognition();
+    }, 5000); // 5 seconds
+  };
+
+  // Function to reset the wake word timeout when user speaks
+  const resetWakeWordTimeout = () => {
+    if (wakeWordTimeout.current) {
+      clearTimeout(wakeWordTimeout.current);
+      wakeWordTimeout.current = null;
+    }
+  };
+
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -127,6 +150,9 @@ function WakeWord() {
             clearTimeout(inactivityTimer.current);
             inactivityTimer.current = null;
           }
+          
+          // Start the 5-second wake word timeout
+          startWakeWordTimeout();
           return;
         }
         
@@ -138,7 +164,10 @@ function WakeWord() {
             setTranscript(fullTranscript);
             currentTranscript.current = fullTranscript;
             
-            // Reset inactivity timer
+            // Reset the wake word timeout when user speaks
+            resetWakeWordTimeout();
+            
+            // Reset inactivity timer for processing
             resetInactivityTimer();
           }
         }
@@ -165,6 +194,9 @@ function WakeWord() {
     return () => {
       if (inactivityTimer.current) {
         clearTimeout(inactivityTimer.current);
+      }
+      if (wakeWordTimeout.current) {
+        clearTimeout(wakeWordTimeout.current);
       }
       if (recognition.current) {
         try {
@@ -207,7 +239,7 @@ function WakeWord() {
       clearTimeout(inactivityTimer.current);
     }
     
-    // Set new 2-second timer
+    // Set new 2-second timer for processing
     inactivityTimer.current = setTimeout(() => {
       if (isActive.current && currentTranscript.current.trim()) {
         processTranscript(currentTranscript.current);
@@ -228,10 +260,14 @@ function WakeWord() {
     setIsProcessing(false); // Make sure processing is also reset
     isProcessingRef.current = false;
     
-    // Clear inactivity timer
+    // Clear all timers
     if (inactivityTimer.current) {
       clearTimeout(inactivityTimer.current);
       inactivityTimer.current = null;
+    }
+    if (wakeWordTimeout.current) {
+      clearTimeout(wakeWordTimeout.current);
+      wakeWordTimeout.current = null;
     }
     
     // Restart listening for wake word
@@ -246,10 +282,14 @@ function WakeWord() {
     // Stop listening completely during processing
     stopListening();
 
-    // Clear inactivity timer since we're processing
+    // Clear all timers since we're processing
     if (inactivityTimer.current) {
       clearTimeout(inactivityTimer.current);
       inactivityTimer.current = null;
+    }
+    if (wakeWordTimeout.current) {
+      clearTimeout(wakeWordTimeout.current);
+      wakeWordTimeout.current = null;
     }
 
     try {
