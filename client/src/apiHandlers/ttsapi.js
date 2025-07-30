@@ -1,181 +1,209 @@
-// react-text-to-speech implementation with highlighting
-import { useSpeak, useVoices } from 'react-text-to-speech';
+// gTTS (Google Text-to-Speech) implementation
+const TTS_SERVER_URL = 'http://localhost:5001';
 
-let currentUtterance = null;
+let currentAudio = null;
 
-// react-text-to-speech text-to-speech implementation
+// gTTS text-to-speech implementation
 export async function textToSpeech(text, voiceName = null, onEnd = null) {
   try {
     // Cancel any ongoing speech
     stopSpeaking();
 
-    console.log('=== react-text-to-speech DEBUG ===');
+    console.log('=== gTTS DEBUG ===');
     console.log('Text type:', typeof text);
     console.log('Text length:', text ? text.length : 'null/undefined');
     console.log('Text content:', text);
     console.log('Text preview (first 100 chars):', text ? text.substring(0, 100) : 'null/undefined');
+    console.log('Voice:', voiceName);
     console.log('=====================');
 
-    console.log('Starting react-text-to-speech:', text);
+    console.log('Starting gTTS:', text);
     
-    // Use Web Speech API as the base (react-text-to-speech uses this under the hood)
-    if (!('speechSynthesis' in window)) {
-      throw new Error('Speech synthesis not supported in this browser');
+    // Determine language from voice name
+    const language = voiceName ? voiceName.split('-')[0] : 'en';
+    
+    // Make request to gTTS server
+    const response = await fetch(`${TTS_SERVER_URL}/tts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text: text,
+        language: language
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP ${response.status}`);
     }
+
+    // Get audio blob
+    const audioBlob = await response.blob();
+    const audioUrl = URL.createObjectURL(audioBlob);
     
-    // Create utterance
-    const utterance = new SpeechSynthesisUtterance(text);
-    currentUtterance = utterance;
-    
-    // Set default language
-    utterance.lang = 'en-US';
-    
-    // Set voice if specified
-    if (voiceName) {
-      const voices = speechSynthesis.getVoices();
-      const voice = voices.find(v => v.name === voiceName);
-      if (voice) {
-        utterance.voice = voice;
-        console.log('Using voice:', voice.name);
-      }
-    }
+    // Create audio element
+    const audio = new Audio(audioUrl);
+    currentAudio = audio;
     
     // Set up event handlers
-    utterance.addEventListener('end', () => {
-      console.log('react-text-to-speech ended');
-      currentUtterance = null;
+    audio.addEventListener('ended', () => {
+      console.log('gTTS ended');
+      URL.revokeObjectURL(audioUrl);
+      currentAudio = null;
       if (onEnd) onEnd();
     });
 
-    utterance.addEventListener('error', (error) => {
-      console.error('react-text-to-speech error:', error);
-      currentUtterance = null;
+    audio.addEventListener('error', (error) => {
+      console.error('gTTS error:', error);
+      URL.revokeObjectURL(audioUrl);
+      currentAudio = null;
       if (onEnd) onEnd();
     });
 
-    utterance.addEventListener('pause', () => {
-      console.log('react-text-to-speech paused');
+    audio.addEventListener('pause', () => {
+      console.log('gTTS paused');
     });
 
-    utterance.addEventListener('resume', () => {
-      console.log('react-text-to-speech resumed');
+    audio.addEventListener('play', () => {
+      console.log('gTTS started');
     });
 
-    utterance.addEventListener('start', () => {
-      console.log('react-text-to-speech started');
-    });
-
-    // Play the speech
-    speechSynthesis.speak(utterance);
-    console.log('react-text-to-speech audio started successfully');
+    // Play the audio
+    await audio.play();
+    console.log('gTTS audio started successfully');
     
-    return utterance;
+    return audio;
   } catch (error) {
-    console.error('react-text-to-speech error:', error);
+    console.error('gTTS error:', error);
     throw error;
   }
 }
 
-// Get available voices from react-text-to-speech
+// Get available voices from gTTS server
 export async function getVoices() {
   try {
-    // Wait for voices to load if they haven't already
-    if (speechSynthesis.getVoices().length === 0) {
-      return new Promise((resolve) => {
-        speechSynthesis.addEventListener('voiceschanged', () => {
-          const voices = speechSynthesis.getVoices();
-          const voiceList = voices.map(voice => ({
-            id: voice.name,
-            name: voice.name,
-            lang: voice.lang,
-            default: voice.default
-          }));
-          resolve(voiceList);
-        });
-        // Trigger voices to load
-        speechSynthesis.getVoices();
-      });
-    } else {
-      const voices = speechSynthesis.getVoices();
-      return voices.map(voice => ({
-        id: voice.name,
-        name: voice.name,
-        lang: voice.lang,
-        default: voice.default
-      }));
+    const response = await fetch(`${TTS_SERVER_URL}/voices`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
     }
+    
+    const data = await response.json();
+    return data.voices.map(voice => ({
+      id: voice.id,
+      name: voice.name,
+      lang: voice.language,
+      default: voice.id === 'en'
+    }));
   } catch (error) {
-    console.error('Error getting voices:', error);
-    // Return default voices if API is not available
+    console.error('Error getting voices from gTTS server:', error);
+    // Return default voices if server is not available
     return [
-      { id: "default", name: "Default Voice", lang: "en-US", default: true }
+      { id: "en", name: "English Voice", lang: "en", default: true },
+      { id: "es", name: "Spanish Voice", lang: "es", default: false },
+      { id: "fr", name: "French Voice", lang: "fr", default: false },
+      { id: "de", name: "German Voice", lang: "de", default: false }
+    ];
+  }
+}
+
+// Get available languages from gTTS server
+export async function getLanguages() {
+  try {
+    const response = await fetch(`${TTS_SERVER_URL}/languages`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data.languages;
+  } catch (error) {
+    console.error('Error getting languages from gTTS server:', error);
+    // Return default languages if server is not available
+    return [
+      { code: 'en', name: 'English' },
+      { code: 'es', name: 'Spanish' },
+      { code: 'fr', name: 'French' },
+      { code: 'de', name: 'German' }
     ];
   }
 }
 
 // Stop speaking
 export function stopSpeaking() {
-  if (currentUtterance) {
-    speechSynthesis.cancel();
-    currentUtterance = null;
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio.currentTime = 0;
+    currentAudio = null;
   }
 }
 
 // Pause speaking
 export function pauseSpeaking() {
-  if (currentUtterance) {
-    speechSynthesis.pause();
+  if (currentAudio) {
+    currentAudio.pause();
   }
 }
 
 // Resume speaking
 export function resumeSpeaking() {
-  if (currentUtterance) {
-    speechSynthesis.resume();
+  if (currentAudio) {
+    currentAudio.play();
   }
 }
 
 // Change speaker (voice)
 export async function changeSpeaker(speakerId) {
   try {
-    const voices = await getVoices();
-    const voice = voices.find(v => v.id === speakerId);
-    
-    if (voice) {
-      console.log('Voice changed to:', voice.name);
-      return { message: `Voice changed to ${voice.name}`, voice: voice };
-    } else {
-      throw new Error(`Voice not found: ${speakerId}`);
+    const response = await fetch(`${TTS_SERVER_URL}/change-voice`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        voice_id: speakerId
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP ${response.status}`);
     }
+
+    const data = await response.json();
+    console.log('Voice changed to:', speakerId);
+    return { message: `Voice changed to ${speakerId}`, voice: { id: speakerId } };
   } catch (error) {
     console.error('Error changing voice:', error);
     throw error;
   }
 }
 
-// Check TTS health (react-text-to-speech availability)
+// Check TTS health (gTTS server availability)
 export async function checkTTSHealth() {
   try {
-    if ('speechSynthesis' in window) {
-      return { 
-        status: 'healthy', 
-        engine: 'react-text-to-speech',
-        available: true,
-        voices: speechSynthesis.getVoices().length,
-        description: 'React TTS with highlighting support'
-      };
-    } else {
-      return { 
-        status: 'unhealthy', 
-        error: 'Speech synthesis not supported in this browser',
-        available: false
-      };
+    const response = await fetch(`${TTS_SERVER_URL}/health`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
     }
+    
+    const data = await response.json();
+    return { 
+      status: 'healthy', 
+      engine: 'gTTS',
+      available: true,
+      description: data.description || 'Google Text-to-Speech API'
+    };
   } catch (error) {
     return { 
       status: 'unhealthy', 
       error: error.message,
-      available: false
+      available: false,
+      description: 'gTTS server not available'
     };
   }
 }
@@ -184,9 +212,9 @@ export async function checkTTSHealth() {
 export function getEngines() {
   return [
     { 
-      id: "react-text-to-speech", 
-      name: "React Text-to-Speech", 
-      description: "React TTS component with highlighting and better integration" 
+      id: "gtts", 
+      name: "Google Text-to-Speech (gTTS)", 
+      description: "High-quality speech synthesis using Google's TTS API" 
     }
   ];
 }
@@ -198,8 +226,9 @@ export function setEngine(engine) {
 
 // Get current engine preference
 export function getCurrentEngine() {
-  return localStorage.getItem('tts_engine') || 'react-text-to-speech';
+  return localStorage.getItem('tts_engine') || 'gtts';
 }
 
-// Export the hooks for use in components that need highlighting
-export { useSpeak, useVoices };
+// Export placeholder hooks for compatibility (not used with gTTS)
+export const useSpeak = () => ({ speak: textToSpeech });
+export const useVoices = () => ({ voices: [], loading: false });

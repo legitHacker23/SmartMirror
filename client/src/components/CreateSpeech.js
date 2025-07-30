@@ -314,7 +314,7 @@ function CreateSpeech() {
             disabled={isSpeaking}
           >
             {voices.map(voice => (
-              <option key={voice.voice_id} value={voice.voice_id}>
+              <option key={voice.id} value={voice.id}>
                 {voice.name}
               </option>
             ))}
